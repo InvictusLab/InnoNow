@@ -4,10 +4,10 @@
 
 For local development, run PostgreSQL and Mailpit with Docker Compose, and run the FastAPI and Vite development servers locally.
 
-Start the supporting services:
+Start PostgreSQL and Mailpit from the project root and wait for the database health check to pass before running migrations.
 
 ```bash
-docker compose up -d db mailpit
+docker compose up -d --wait db mailpit
 ```
 
 Then, from the `backend` directory, install the dependencies and prepare the database:
@@ -85,7 +85,7 @@ Stop a locally running FastAPI server before starting the Compose backend becaus
 
 The main `compose.yml` file contains the configuration shared by the whole stack. Docker Compose loads it automatically.
 
-The `compose.override.yml` file adds local development settings, such as mounting the source code as a volume. Docker Compose also loads it automatically and applies it on top of `compose.yml`.
+Docker Compose automatically loads `compose.override.yml` on top of `compose.yml` for local development. When you run `docker compose watch`, it syncs backend source changes into the running container. Changes to `backend/pyproject.toml` or frontend source files trigger a rebuild of the backend image, which includes the built frontend.
 
 The `compose.deploy.yml` file contains the deployment-specific settings, including HTTPS and automatic certificate handling. It is explicitly combined with `compose.yml` when deploying the application.
 
@@ -113,25 +113,23 @@ You can find a file `.pre-commit-config.yaml` with configurations at the root of
 
 `prek` is already part of the dependencies of the project.
 
-From the project root, install the Git hook so that `prek` runs automatically before each commit:
+From the project root, install the `pre-commit` and `commit-msg` Git hooks. Run this command again if you previously installed only the `pre-commit` hook.
 
 ```bash
 uv run prek install -f
 ```
 
-The `-f` flag forces the installation, in case there was already a `pre-commit` hook previously installed.
+The `-f` flag replaces existing hooks of these types. At commit time, `pre-commit` runs the code checks and formatters. If a formatter changes a file, review and stage the changes before retrying.
 
-Now whenever you try to commit, for example with:
+The `commit-msg` hook checks the message against the [repository commit rules](./AGENTS.md#commits-and-pull-requests).
 
 ```bash
-git commit
+git commit -m "fix(auth): reject expired password reset tokens"
 ```
-
-`prek` will check and format the code you are about to commit. If it modifies any files, add those files to Git again before committing.
 
 ### Run `prek` Manually
 
-You can also run `prek` manually on all files from the project root:
+To run the `pre-commit` checks on all files, run this command from the project root.
 
 ```bash
 uv run prek run --all-files
